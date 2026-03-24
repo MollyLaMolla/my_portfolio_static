@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import Image from "next/image";
+import Image from "@/components/ui/Image";
 import MagicBtn from "./ui/magicBtn";
 import ContactWindow from "./ui/contact-window";
 import { FaLocationArrow } from "react-icons/fa";

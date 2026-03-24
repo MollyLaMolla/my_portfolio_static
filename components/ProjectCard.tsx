@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/ui/Image";
 import { FaLocationArrow } from "react-icons/fa";
 
 export interface ProjectCardProps {

@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import Image, { StaticImageData } from "next/image";
+import Image, { StaticImageData } from "@/components/ui/Image";
 import { GlobeDemo } from "./GridGlobe";
 import dynamic from "next/dynamic";
 import { useState, useEffect, useRef } from "react";
