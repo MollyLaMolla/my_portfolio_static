@@ -20,8 +20,10 @@ export const FloatingNav = ({ className }: { className?: string }) => {
   const [isNarrow, setIsNarrow] = useState(false);
   const [initAnim, setInitAnim] = useState(true);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const itemRefs = useRef<(HTMLAnchorElement | null)[]>([]);
+  const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const lockRef = useRef<number>(0);
+  const scrollAnimationRef = useRef<number | null>(null);
+  const restoreScrollLockRef = useRef<(() => void) | null>(null);
   const [indicator, setIndicator] = useState({
     x: 0,
     y: 0,
@@ -86,6 +88,96 @@ export const FloatingNav = ({ className }: { className?: string }) => {
     const width = target.offsetWidth + PADDING * 4;
     const height = target.offsetHeight + PADDING * 2;
     setIndicator({ x, y, width, height });
+  };
+
+  const unlockUserScroll = () => {
+    restoreScrollLockRef.current?.();
+    restoreScrollLockRef.current = null;
+  };
+
+  const lockUserScroll = () => {
+    unlockUserScroll();
+
+    const preventDefault = (event: Event) => {
+      event.preventDefault();
+    };
+
+    const preventScrollKeys = (event: KeyboardEvent) => {
+      const blockedKeys = [
+        "ArrowUp",
+        "ArrowDown",
+        "PageUp",
+        "PageDown",
+        "Home",
+        "End",
+        " ",
+      ];
+
+      if (blockedKeys.includes(event.key)) {
+        event.preventDefault();
+      }
+    };
+
+    window.addEventListener("wheel", preventDefault, { passive: false });
+    window.addEventListener("touchmove", preventDefault, { passive: false });
+    window.addEventListener("keydown", preventScrollKeys, { passive: false });
+
+    restoreScrollLockRef.current = () => {
+      window.removeEventListener("wheel", preventDefault);
+      window.removeEventListener("touchmove", preventDefault);
+      window.removeEventListener("keydown", preventScrollKeys);
+    };
+  };
+
+  const smoothScrollToSection = (hash: string) => {
+    const id = hash.replace(/^#/, "");
+    const target = document.getElementById(id);
+    const scroller = document.scrollingElement as HTMLElement | null;
+
+    if (!target || !scroller) return;
+
+    if (scrollAnimationRef.current) {
+      cancelAnimationFrame(scrollAnimationRef.current);
+      unlockUserScroll();
+    }
+
+    const startTop = scroller.scrollTop;
+    const navOffset = 96;
+    const targetTop = Math.max(
+      0,
+      target.getBoundingClientRect().top + startTop - navOffset
+    );
+    const distance = targetTop - startTop;
+
+    if (Math.abs(distance) < 2) {
+      window.history.replaceState(null, "", hash);
+      return;
+    }
+
+    lockUserScroll();
+
+    const duration = 700;
+    const startTime = performance.now();
+    const easeInOutCubic = (t: number) =>
+      t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+    const tick = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = easeInOutCubic(progress);
+
+      scroller.scrollTop = startTop + distance * eased;
+
+      if (progress < 1) {
+        scrollAnimationRef.current = requestAnimationFrame(tick);
+      } else {
+        scrollAnimationRef.current = null;
+        unlockUserScroll();
+        window.history.replaceState(null, "", hash);
+      }
+    };
+
+    scrollAnimationRef.current = requestAnimationFrame(tick);
   };
 
   // Initial indicator: cover full navbar, then animate to active button
@@ -185,6 +277,15 @@ export const FloatingNav = ({ className }: { className?: string }) => {
     };
   }, [activeIndex]);
 
+  useEffect(() => {
+    return () => {
+      if (scrollAnimationRef.current) {
+        cancelAnimationFrame(scrollAnimationRef.current);
+      }
+      unlockUserScroll();
+    };
+  }, []);
+
   return (
     <AnimatePresence mode="wait">
       <motion.div
@@ -198,11 +299,11 @@ export const FloatingNav = ({ className }: { className?: string }) => {
           className
         )}>
         {navItems.map((navItem, idx) => (
-          <a
+          <button
             key={`link-${idx}`}
-            href={navItem.link}
+            type="button"
             className={cn(
-              "relative z-10 dark:text-neutral-50 items-center flex space-x-1 text-neutral-600 dark:hover:text-neutral-300 hover:text-neutral-500 px-3 py-1 rounded-full"
+              "relative z-10 dark:text-neutral-50 items-center flex space-x-1 text-neutral-600 dark:hover:text-neutral-300 hover:text-neutral-500 px-3 py-1 rounded-full bg-transparent border-none cursor-pointer"
             )}
             ref={(el) => {
               itemRefs.current[idx] = el;
@@ -215,6 +316,7 @@ export const FloatingNav = ({ className }: { className?: string }) => {
               lockRef.current = until;
               // ensure immediate visual update
               setTimeout(() => recalcIndicator(idx), 0);
+              smoothScrollToSection(navItem.link);
             }}>
             <span className="flex items-center text-sm">
               {(() => {
@@ -227,7 +329,7 @@ export const FloatingNav = ({ className }: { className?: string }) => {
                 return navItem.name;
               })()}
             </span>
-          </a>
+          </button>
         ))}
 
         {/* Animated moving rounded border indicator */}

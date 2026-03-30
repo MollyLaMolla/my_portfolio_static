@@ -2,7 +2,7 @@ import NextImage, { type ImageProps, type StaticImageData } from "next/image";
 
 export type { StaticImageData };
 
-const basePath = "/my_portfolio_static";
+const basePath = process.env.NODE_ENV === "production" ? "/my_portfolio_static" : "";
 
 export default function Image(props: ImageProps) {
   const src =

@@ -553,6 +553,6 @@ export const socialMedia = [
   {
     id: 2,
     img: "/linkedin.svg",
-    link: "https://github.com/MollyLaMolla",
+    link: "https://www.linkedin.com/in/alessandro-slyusar-68664a352/",
   },
 ];
